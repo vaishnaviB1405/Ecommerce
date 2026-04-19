@@ -16,24 +16,27 @@ const Login = () => {
 
     try {
       const response = await axios.post("http://localhost:8080/user/login", {
-        email: email,
-        password: password
+        email,
+        password
       });
 
-      // ✅ store full user object
-      localStorage.setItem("user", JSON.stringify(response.data));
+      // ✅ token
+      localStorage.setItem("token", response.data.token);
 
-      // ✅ store correct username (IMPORTANT FIX)
-      localStorage.setItem("username", response.data.name);
+      // ✅ IMPORTANT FIX
+      localStorage.setItem("user", JSON.stringify({
+        userId: response.data.user.userId,
+        name: response.data.user.name,
+        email: response.data.user.email
+      }));
 
       alert("Login successful ✅");
 
-      // ✅ redirect to home
       navigate("/");
       window.location.reload();
 
     } catch (error) {
-      setErrorMsg("User not registered or invalid credentials ❌");
+      setErrorMsg("Invalid credentials ❌");
     }
   };
 
@@ -49,7 +52,6 @@ const Login = () => {
           Login
         </h2>
 
-        {/* Email */}
         <input
           required
           type="email"
@@ -59,7 +61,6 @@ const Login = () => {
           className="border p-2 rounded text-black"
         />
 
-        {/* Password */}
         <input
           required
           type="password"
@@ -69,33 +70,20 @@ const Login = () => {
           className="border p-2 rounded text-black"
         />
 
-        {/* Error Message */}
         {errorMsg && (
           <p className="text-red-500 text-sm text-center">
             {errorMsg}
           </p>
         )}
 
-        {/* Login Button */}
         <button
           type="submit"
-          className="bg-green-500 text-white p-2 rounded hover:bg-green-600"
+          className="bg-green-500 text-white p-2 rounded"
         >
           Login
         </button>
 
-        {/* Links */}
-        <Link
-          to="/forgot-password"
-          className="text-blue-500 underline text-sm text-center"
-        >
-          Forgot Password
-        </Link>
-
-        <Link
-          to="/register"
-          className="text-blue-500 underline text-sm text-center"
-        >
+        <Link to="/register" className="text-blue-500 text-sm text-center">
           Create Account
         </Link>
 

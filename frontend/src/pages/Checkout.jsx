@@ -10,48 +10,68 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("COD");
+  const [address, setAddress] = useState("");
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  const platformFee = 7;
+  const platformFee = cartItems.length > 0 ? 7 : 0;
   const total = subtotal + platformFee;
 
+  // ✅ PLACE ORDER
   const handlePlaceOrder = async () => {
+    if (!address.trim()) {
+      alert("Please enter delivery address");
+      return;
+    }
+
     setLoading(true);
 
+    const token = localStorage.getItem("token");
+
     try {
-      // ✅ COD FLOW
+      // =========================
+      // COD PAYMENT
+      // =========================
       if (paymentMethod === "COD") {
-        await fetch(`http://localhost:8080/order/checkout/1`, {
-          method: "POST"
+        await fetch("http://localhost:8080/order/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            address: address
+          })
         });
 
         setOrderPlaced(true);
       }
 
-      // ✅ RAZORPAY FLOW
+      // =========================
+      // ONLINE PAYMENT (RAZORPAY)
+      // =========================
       else {
         const res = await fetch(
           `http://localhost:8080/payment/create-order?amount=${total}`,
-          { method: "POST" }
+          {
+            method: "POST"
+          }
         );
 
         const order = await res.json();
 
         const options = {
-          key: "YOUR_KEY_ID", // 🔴 Replace with your Razorpay key
+          key: "rzp_test_Se2unupJzU77r1", // replace key
           amount: order.amount,
           currency: order.currency,
-          name: "Luxury Perfume Store",
+          name: "NOCTUA Perfumes",
           description: "Order Payment",
           order_id: order.id,
 
           handler: async function (response) {
-
-            // ✅ Verify payment
             await fetch("http://localhost:8080/payment/verify", {
               method: "POST",
               headers: {
@@ -60,122 +80,189 @@ export default function Checkout() {
               body: JSON.stringify(response)
             });
 
-            // ✅ Save order in backend
-            await fetch(`http://localhost:8080/order/checkout/1`, {
-              method: "POST"
+            await fetch("http://localhost:8080/order/checkout", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                address: address
+              })
             });
 
             setOrderPlaced(true);
+          },
+
+          theme: {
+            color: "#16a34a"
           }
         };
 
         const rzp = new window.Razorpay(options);
         rzp.open();
       }
-
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.log(error);
       alert("Something went wrong");
     }
 
     setLoading(false);
   };
 
-  // ✅ SUCCESS SCREEN
+  // =========================
+  // SUCCESS PAGE
+  // =========================
   if (orderPlaced) {
     return (
-      <div className="p-10 text-center">
-        <h1 className="text-3xl font-bold text-green-600">
-          🎉 Order Placed Successfully!
-        </h1>
+      <div className="min-h-screen bg-black text-white flex justify-center items-center">
+        <div className="bg-zinc-900 p-10 rounded-xl text-center w-[500px] shadow-xl">
+          <h1 className="text-4xl font-bold text-green-500">
+            🎉 Order Placed!
+          </h1>
 
-        <p className="mt-4 text-lg">
-          Payment Mode:{" "}
-          <strong>
-            {paymentMethod === "COD"
-              ? "Cash on Delivery"
-              : "Online Payment (Razorpay)"}
-          </strong>
-        </p>
+          <p className="mt-4 text-lg">
+            Payment Method:{" "}
+            <span className="font-semibold">
+              {paymentMethod === "COD"
+                ? "Cash on Delivery"
+                : "Online Payment"}
+            </span>
+          </p>
 
-        <p className="mt-2 text-gray-600">
-          Your luxury perfume order will be delivered soon.
-        </p>
+          <p className="mt-3 text-gray-400">
+            Your perfume order will be delivered soon.
+          </p>
 
-        <button
-          onClick={() => navigate("/")}
-          className="mt-6 bg-black text-white px-6 py-2 rounded"
-        >
-          Go to Home
-        </button>
+          <button
+            onClick={() => navigate("/")}
+            className="mt-6 bg-green-500 px-6 py-3 rounded-lg"
+          >
+            Go Home
+          </button>
+        </div>
       </div>
     );
   }
 
-  // ✅ CHECKOUT UI
+  // =========================
+  // MAIN PAGE
+  // =========================
   return (
-    <div className="p-10">
-      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
+    <div className="min-h-screen bg-black text-white p-10">
+      <h1 className="text-4xl font-bold mb-10 text-center">
+        Checkout
+      </h1>
 
-      {/* PRODUCTS */}
-      <div className="space-y-4">
-        {cartItems.map((item) => (
-          <div
-            key={item.cartId}
-            className="flex justify-between border p-4 rounded"
-          >
-            <div>
-              <h2 className="font-semibold">{item.productName}</h2>
-              <p>Qty: {item.quantity}</p>
+      {cartItems.length === 0 ? (
+        <p className="text-center text-xl">
+          No items in checkout
+        </p>
+      ) : (
+        <div className="grid md:grid-cols-3 gap-10">
+
+          {/* LEFT SIDE */}
+          <div className="md:col-span-2 space-y-5">
+
+            {/* PRODUCTS */}
+            {cartItems.map((item) => (
+              <div
+                key={item.cartId}
+                className="bg-zinc-900 p-5 rounded-xl flex justify-between items-center"
+              >
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    {item.productName}
+                  </h2>
+                  <p className="text-gray-400">
+                    Qty: {item.quantity}
+                  </p>
+                </div>
+
+                <p className="text-lg font-bold">
+                  ₹{item.price * item.quantity}
+                </p>
+              </div>
+            ))}
+
+            {/* ADDRESS */}
+            <div className="bg-zinc-900 p-5 rounded-xl">
+              <h2 className="text-xl font-bold mb-3">
+                Delivery Address
+              </h2>
+
+              <textarea
+                rows="4"
+                placeholder="Enter full delivery address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full p-3 rounded text-white"
+              ></textarea>
             </div>
-            <p>₹{item.price * item.quantity}</p>
+
+            {/* PAYMENT */}
+            <div className="bg-zinc-900 p-5 rounded-xl">
+              <h2 className="text-xl font-bold mb-3">
+                Payment Method
+              </h2>
+
+              <label className="block mb-2">
+                <input
+                  type="radio"
+                  checked={paymentMethod === "COD"}
+                  onChange={() => setPaymentMethod("COD")}
+                />{" "}
+                Cash on Delivery
+              </label>
+
+              <label className="block">
+                <input
+                  type="radio"
+                  checked={paymentMethod === "ONLINE"}
+                  onChange={() => setPaymentMethod("ONLINE")}
+                />{" "}
+                Pay Online (Razorpay)
+              </label>
+            </div>
+
           </div>
-        ))}
-      </div>
 
-      {/* BILL */}
-      <div className="mt-8 text-right space-y-2">
-        <p>Subtotal: ₹{subtotal}</p>
-        <p>Platform Fee: ₹{platformFee}</p>
+          {/* RIGHT SIDE BILL */}
+          <div className="bg-zinc-900 p-6 rounded-xl h-fit">
+            <h2 className="text-2xl font-bold mb-6">
+              Bill Summary
+            </h2>
 
-        <h2 className="text-2xl font-bold">
-          Total: ₹{total}
-        </h2>
-      </div>
+            <div className="space-y-3 text-lg">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>₹{subtotal}</span>
+              </div>
 
-      {/* PAYMENT METHOD */}
-      <div className="mt-6">
-        <h2 className="font-bold mb-2">Select Payment Method:</h2>
+              <div className="flex justify-between">
+                <span>Platform Fee</span>
+                <span>₹{platformFee}</span>
+              </div>
 
-        <label className="block">
-          <input
-            type="radio"
-            value="COD"
-            checked={paymentMethod === "COD"}
-            onChange={() => setPaymentMethod("COD")}
-          />
-          Cash on Delivery
-        </label>
+              <hr className="border-zinc-700" />
 
-        <label className="block">
-          <input
-            type="radio"
-            value="ONLINE"
-            checked={paymentMethod === "ONLINE"}
-            onChange={() => setPaymentMethod("ONLINE")}
-          />
-          Pay Online (Razorpay)
-        </label>
-      </div>
+              <div className="flex justify-between text-xl font-bold">
+                <span>Total</span>
+                <span>₹{total}</span>
+              </div>
+            </div>
 
-      {/* BUTTON */}
-      <button
-        onClick={handlePlaceOrder}
-        disabled={loading}
-        className="mt-6 bg-green-500 text-white px-6 py-2 rounded"
-      >
-        {loading ? "Processing..." : "Place Order"}
-      </button>
+            <button
+              onClick={handlePlaceOrder}
+              disabled={loading}
+              className="w-full mt-6 bg-green-500 py-3 rounded-lg text-lg font-semibold"
+            >
+              {loading ? "Processing..." : "Place Order"}
+            </button>
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }

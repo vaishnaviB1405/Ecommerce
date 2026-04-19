@@ -1,112 +1,133 @@
+
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-
-import {products} from "../data/products";
+import { products } from "../data/products";
 
 export default function Layout() {
-const [search, setSearch] = useState("");
-
-  const [username, setUsername] = useState(null);
-  const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
 
-  
+  const [search, setSearch] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // ✅ Load user from localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
+
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      setUsername(user?.name || null);
+
+      setUsername(user.name);
+      setEmail(user.email);
     }
   }, []);
 
-  // ✅ LOGOUT (MAIN FIX)
+  // ✅ Logout
   const handleLogout = () => {
+    localStorage.removeItem("token");
     localStorage.removeItem("user");
-    localStorage.removeItem("username");
 
-    setUsername(null); // 🔥 instantly update UI
-
-    navigate("/login"); // redirect
+    navigate("/login");
+    window.location.reload();
   };
 
   return (
-    <div className="min-h-screen bg-black text-neutral-200 flex flex-col">
+    <div className="min-h-screen bg-black text-white flex flex-col">
 
+      {/* HEADER */}
       <header className="flex justify-between items-center px-12 py-6 border-b border-neutral-800">
 
-        <Link to="/" className="font-serif text-2xl tracking-widest">
+        {/* LOGO */}
+        
+        <Link to="/" className="text-2xl font-bold tracking-widest">
           NOCTUA
         </Link>
 
-         
+        {/* SEARCH */}
+        <input
+          type="text"
+          placeholder="Search perfumes..."
+          value={search}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearch(value);
 
-<input
-  type="text"
-  placeholder="Search perfumes..."
-  value={search}
-  onChange={(e) => {
-    const value = e.target.value;
-    setSearch(value);
+            const found = products.find((p) =>
+              p.name.toLowerCase().includes(value.toLowerCase())
+            );
 
-    const found = products.find(p =>
-      p.name.toLowerCase().includes(value.toLowerCase())
-    );
+            if (found) {
+              navigate(`/products/${found.id}`);
+            }
+          }}
+          className="px-3 py-1 rounded text-black w-64"
+        />
 
-    if (found) {
-      navigate(`/products/${found.id}`); // ✅ IMPORTANT
-    }
-  }}
-  className="px-3 py-1 rounded bg-white text-black w-64"
-/>
-
-
-
+        {/* MENU */}
         <div className="flex gap-6 items-center">
 
           <Link to="/products">COLLECTION</Link>
           <Link to="/about">ABOUT</Link>
 
-          {/* ✅ USER / LOGIN */}
+          {/* LOGIN / USER */}
           {!username ? (
             <Link to="/login">LOGIN</Link>
           ) : (
             <div className="relative">
-              <span
+
+              <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="text-amber-500 font-semibold cursor-pointer"
+                className="text-yellow-400 font-semibold"
               >
-                {username}
-              </span>
+                {username} ▼
+              </button>
 
               {showDropdown && (
-                <div className="absolute right-0 mt-2 bg-white text-black rounded shadow-md w-32 z-50">
+                <div className="absolute right-0 mt-2 bg-white text-black rounded shadow-md w-44 z-50">
+
+                  <button
+                    onClick={() => navigate("/orders")}
+                    className="block w-full text-left px-4 py-2 hover:bg-gray-200"
+                  >
+                    My Orders
+                  </button>
+
+                  {/* ADMIN PANEL */}
+                  {email === "vaishnavibhosale145@gmail.com" && (
+                    <button
+                      onClick={() => navigate("/admin")}
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-200"
+                    >
+                      Admin Panel
+                    </button>
+                  )}
+
                   <button
                     onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-200"
+                    className="block w-full text-left px-4 py-2 hover:bg-gray-200"
                   >
                     Logout
                   </button>
+
                 </div>
               )}
+
             </div>
           )}
-
-          <button
-          onClick={() => navigate("/orders")} className="bg-black text-white px-4 py-2 rounded">
-          My Orders
-          </button>
 
           <Link to="/cart">CART</Link>
 
         </div>
-
       </header>
 
-      <main className="flex-grow px-12">
+      {/* BODY */}
+      <main className="flex-grow px-12 py-8">
         <Outlet />
       </main>
 
-      <footer className="text-center py-10 text-sm border-t border-neutral-800">
+      {/* FOOTER */}
+      <footer className="text-center py-6 border-t border-neutral-800">
         © 2026 Noctua Parfums
       </footer>
 

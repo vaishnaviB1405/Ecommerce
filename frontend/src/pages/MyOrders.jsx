@@ -1,35 +1,45 @@
 import { useEffect, useState } from "react";
 
 export default function MyOrders() {
-
   const [orders, setOrders] = useState([]);
-  const userId = 1; // temporary
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost:8080/order/user/${userId}`)
+    fetch("http://localhost:8080/order/my-orders", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
-        setOrders(data);
+        if (Array.isArray(data)) {
+          setOrders(data);
+        } else {
+          setOrders([]);
+        }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setOrders([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   return (
     <div className="p-10">
-
       <h1 className="text-3xl font-bold mb-6">My Orders</h1>
 
-      {orders.length === 0 ? (
+      {loading ? (
+        <p>Loading...</p>
+      ) : orders.length === 0 ? (
         <p>No orders found</p>
       ) : (
         <div className="space-y-6">
-
           {orders.map((order) => (
             <div
               key={order.orderId}
               className="border p-6 rounded shadow"
             >
-
               <div className="flex justify-between mb-2">
                 <h2 className="font-bold">
                   Order ID: {order.orderId}
@@ -46,12 +56,13 @@ export default function MyOrders() {
                 Payment: {order.paymentStatus}
               </p>
 
+              <p className="text-gray-500">
+                Address: {order.address}
+              </p>
             </div>
           ))}
-
         </div>
       )}
-
     </div>
   );
 }
